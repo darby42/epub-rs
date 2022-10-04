@@ -4,13 +4,13 @@
 //! chapters, etc.
 
 use anyhow::{anyhow, Error};
-use xmlutils::XMLError;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::{Read, Seek};
 use std::path::{Component, Path, PathBuf};
+use xmlutils::XMLError;
 
 use crate::archive::EpubArchive;
 
@@ -600,7 +600,7 @@ impl<R: Read + Seek> EpubDoc<R> {
     pub fn resource_uri_to_chapter(&self, uri: &PathBuf) -> Option<usize> {
         for (k, (path, _mime)) in self.resources.iter() {
             if path == uri {
-                return self.resource_id_to_chapter(&k);
+                return self.resource_id_to_chapter(k);
             }
         }
 
@@ -618,12 +618,12 @@ impl<R: Read + Seek> EpubDoc<R> {
     // file. Failing to convert to unix-style on Windows causes the
     // ZipArchive not to find the file.
     fn convert_path_separators(&self, href: &str) -> PathBuf {
-        let path = self.root_base.join(href.split("/").collect::<PathBuf>());
+        let path = self.root_base.join(href.split('/').collect::<PathBuf>());
         if cfg!(windows) {
-            let path = path.as_path().display().to_string().replace("\\", "/");
+            let path = path.as_path().display().to_string().replace('\\', "/");
             return PathBuf::from(path);
         }
-        PathBuf::from(path)
+        path
     }
 
     fn fill_resources(&mut self) -> Result<(), Error> {
@@ -693,12 +693,11 @@ impl<R: Read + Seek> EpubDoc<R> {
         let href = item.get_attr("href")?;
         let mtype = item.get_attr("media-type")?;
         let path = self.convert_path_separators(&href);
-        self.resources
-            .insert(id, (path, mtype));
+        self.resources.insert(id, (path, mtype));
         Ok(())
     }
 
-    fn insert_spine(&mut self, item:&xmlutils::XMLNode) -> Result<(), XMLError> {
+    fn insert_spine(&mut self, item: &xmlutils::XMLNode) -> Result<(), XMLError> {
         let id = item.get_attr("idref")?;
         self.spine.push(id);
         Ok(())
@@ -736,7 +735,7 @@ impl<R: Read + Seek> EpubDoc<R> {
             let play_order = item
                 .get_attr("playOrder")
                 .ok()
-                .and_then(|n| usize::from_str_radix(&n, 10).ok());
+                .and_then(|n| n.parse::<usize>().ok());
             let content = match item.find("content") {
                 Ok(c) => c
                     .borrow()
@@ -806,7 +805,7 @@ fn build_epub_uri<P: AsRef<Path>>(path: P, append: &str) -> String {
 
     // If on Windows, replace all Windows path separators with Unix path separators
     let path = if cfg!(windows) {
-        cpath.display().to_string().replace("\\", "/")
+        cpath.display().to_string().replace('\\', "/")
     } else {
         cpath.display().to_string()
     };
