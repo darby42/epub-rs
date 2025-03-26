@@ -139,7 +139,7 @@ impl EpubDoc<BufReader<File>> {
 /// A EpubDoc used for testing purposes
 #[cfg(feature = "mock")]
 impl EpubDoc<Cursor<Vec<u8>>> {
-    pub fn mock() -> Result<Self, Error> {
+    pub fn mock() -> Result<Self, DocError> {
         // binary for empty zip file so that archive can be created
         let data = vec![
             0x50, 0x4b, 0x05, 0x06, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00,
@@ -159,6 +159,7 @@ impl EpubDoc<Cursor<Vec<u8>>> {
             current: 0,
             extra_css: vec![],
             unique_identifier: None,
+            cover_id: None,
         };
         Ok(doc)
     }
