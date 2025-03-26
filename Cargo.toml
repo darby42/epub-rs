@@ -15,6 +15,9 @@ repository = "https://github.com/danigm/epub-rs.git"
 version = "1.2.3"
 edition = "2018"
 
+[features]
+mock = []
+
 [dependencies]
 safer-ffi = "0.0.10"
 regex = "1.4.2"

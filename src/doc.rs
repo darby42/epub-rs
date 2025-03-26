@@ -12,6 +12,9 @@ use std::io::{Read, Seek};
 use std::path::{Component, Path, PathBuf};
 use xmlutils::XMLError;
 
+#[cfg(feature = "mock")]
+use std::io::Cursor;
+
 use crate::archive::EpubArchive;
 
 use crate::xmlutils;
@@ -114,6 +117,34 @@ impl EpubDoc<BufReader<File>> {
         let file = File::open(path)?;
         let mut doc = EpubDoc::from_reader(BufReader::new(file))?;
         doc.archive.path = path.to_path_buf();
+        Ok(doc)
+    }
+}
+
+/// A EpubDoc used for testing purposes
+#[cfg(feature = "mock")]
+impl EpubDoc<Cursor<Vec<u8>>> {
+    pub fn mock() -> Result<Self, Error> {
+        // binary for empty zip file so that archive can be created
+        let data = vec![
+            0x50, 0x4b, 0x05, 0x06, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00,
+            00, 00,
+        ];
+        let reader = std::io::Cursor::new(data);
+        let archive = EpubArchive::from_reader(reader)?;
+
+        let doc = Self {
+            archive,
+            spine: vec![],
+            toc: vec![],
+            resources: HashMap::new(),
+            metadata: HashMap::new(),
+            root_file: PathBuf::new(),
+            root_base: PathBuf::new(),
+            current: 0,
+            extra_css: vec![],
+            unique_identifier: None,
+        };
         Ok(doc)
     }
 }
