@@ -11,6 +11,9 @@ use std::io::{Read, Seek};
 use std::path::{Component, Path, PathBuf};
 use xmlutils::XMLError;
 
+#[cfg(feature = "mock")]
+use std::io::Cursor;
+
 use crate::archive::EpubArchive;
 
 use crate::xmlutils;
@@ -111,6 +114,35 @@ pub struct EpubDoc<R: Read + Seek> {
 
     /// The id of the cover, if any
     pub cover_id: Option<String>,
+}
+
+/// A EpubDoc used for testing purposes
+#[cfg(feature = "mock")]
+impl EpubDoc<Cursor<Vec<u8>>> {
+    pub fn mock() -> Result<Self, DocError> {
+        // binary for empty zip file so that archive can be created
+        let data = vec![
+            0x50, 0x4b, 0x05, 0x06, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00,
+            00, 00,
+        ];
+        let reader = std::io::Cursor::new(data);
+        let archive = EpubArchive::from_reader(reader)?;
+
+        let doc = Self {
+            archive,
+            spine: vec![],
+            toc: vec![],
+            resources: HashMap::new(),
+            metadata: HashMap::new(),
+            root_file: PathBuf::new(),
+            root_base: PathBuf::new(),
+            current: 0,
+            extra_css: vec![],
+            unique_identifier: None,
+            cover_id: None,
+        };
+        Ok(doc)
+    }
 }
 
 impl EpubDoc<BufReader<File>> {
@@ -250,9 +282,7 @@ impl<R: Read + Seek> EpubDoc<R> {
     /// Returns [`None`] if the cover can't be found.
     pub fn get_cover(&mut self) -> Option<(Vec<u8>, String)> {
         let cover_id = self.get_cover_id();
-        cover_id.and_then(|cid| {
-            self.get_resource(&cid)
-        })
+        cover_id.and_then(|cid| self.get_resource(&cid))
     }
 
     /// Returns Release Identifier defined at
@@ -618,7 +648,9 @@ impl<R: Read + Seek> EpubDoc<R> {
         for r in &manifest.borrow().children {
             let item = r.borrow();
             if self.cover_id.is_none() {
-                if let (Some(id), Some(property)) = (item.get_attr("id"), item.get_attr("properties")) {
+                if let (Some(id), Some(property)) =
+                    (item.get_attr("id"), item.get_attr("properties"))
+                {
                     if property == "cover-image" {
                         self.cover_id = Some(id);
                     }
@@ -717,7 +749,12 @@ impl<R: Read + Seek> EpubDoc<R> {
         let linear = item.get_attr("linear").unwrap_or("yes".into()) == "yes";
         let properties = item.get_attr("properties");
         let id = item.get_attr("id");
-        self.spine.push(SpineItem { idref, id, linear, properties });
+        self.spine.push(SpineItem {
+            idref,
+            id,
+            linear,
+            properties,
+        });
         Ok(())
     }
 
