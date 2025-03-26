@@ -4,7 +4,7 @@ use std::path::Path;
 #[test]
 #[cfg(feature = "mock")]
 fn doc_mock() {
-    let mock = EpubDoc::mock();
+    let mock = EpubDoc::mock_empty();
     assert!(mock.is_ok());
 }
 

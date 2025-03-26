@@ -11,9 +11,6 @@ use std::io::{Read, Seek};
 use std::path::{Component, Path, PathBuf};
 use xmlutils::XMLError;
 
-#[cfg(feature = "mock")]
-use std::io::Cursor;
-
 use crate::archive::EpubArchive;
 
 use crate::xmlutils;
@@ -118,17 +115,24 @@ pub struct EpubDoc<R: Read + Seek> {
 
 /// A EpubDoc used for testing purposes
 #[cfg(feature = "mock")]
-impl EpubDoc<Cursor<Vec<u8>>> {
-    pub fn mock() -> Result<Self, DocError> {
+impl EpubDoc<std::io::Cursor<Vec<u8>>> {
+    pub fn mock_empty() -> Result<Self, DocError> {
         // binary for empty zip file so that archive can be created
-        let data = vec![
+        let data: Vec<u8> = vec![
             0x50, 0x4b, 0x05, 0x06, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00, 00,
             00, 00,
         ];
-        let reader = std::io::Cursor::new(data);
-        let archive = EpubArchive::from_reader(reader)?;
 
-        let doc = Self {
+        Self::mock(std::io::Cursor::new(data))
+    }
+}
+
+/// A EpubDoc used for testing purposes
+#[cfg(feature = "mock")]
+impl<R: Read + Seek> EpubDoc<R> {
+    pub fn mock(reader: R) -> Result<Self, DocError> {
+        let archive = EpubArchive::from_reader(reader)?;
+        Ok(Self {
             archive,
             spine: vec![],
             toc: vec![],
@@ -140,8 +144,7 @@ impl EpubDoc<Cursor<Vec<u8>>> {
             extra_css: vec![],
             unique_identifier: None,
             cover_id: None,
-        };
-        Ok(doc)
+        })
     }
 }
 
